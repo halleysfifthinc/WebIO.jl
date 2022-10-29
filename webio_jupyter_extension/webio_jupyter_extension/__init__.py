@@ -30,3 +30,5 @@ def _jupyter_server_extension_paths():
     return [{
         "module": "webio_jupyter_serverextension",
     }]
+
+_jupyter_server_extension_points = _jupyter_server_extension_paths
