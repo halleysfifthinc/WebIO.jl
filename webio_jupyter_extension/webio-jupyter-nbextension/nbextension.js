@@ -211,7 +211,7 @@ const cellHasWebIOOutput = (cell) => {
 export const rerenderWebIOCells = () => {
   debug("Rerendering all WebIO cells.");
   if (!Jupyter.notebook._fully_loaded) {
-    debu("When rerendering WebIO cells, the notebook wasn't loaded; will try again in 250ms.");
+    debug("When rerendering WebIO cells, the notebook wasn't loaded; will try again in 250ms.");
     setTimeout(rerenderWebIOCells, 250);
     return;
   }
