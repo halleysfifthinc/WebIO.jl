@@ -89,7 +89,7 @@ end
 setup(provider::AbstractString) = setup(Symbol(provider))
 
 function prefetch_provider_file(basename)
-  filepath = joinpath(@__DIR__, "providers", basename)
+  filepath = joinpath(@__DIR__, "..", "ext", basename)
   code = read(filepath, String)
   (file = filepath, code = code)
 end
