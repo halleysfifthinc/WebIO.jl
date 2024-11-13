@@ -94,7 +94,6 @@ function prefetch_provider_file(basename)
   (file = filepath, code = code)
 end
 
-provider_mux = prefetch_provider_file("mux.jl")
 provider_generic_http = prefetch_provider_file("generic_http.jl")
 
 struct _IJuliaInit
@@ -108,11 +107,10 @@ struct _IJuliaInit
     end
 end
 
+function webio_serve end
+
 function __init__()
     push!(Observables.addhandler_callbacks, WebIO.setup_comm)
-    @require Mux="a975b10e-0019-58db-a62f-e48ff68538c9" begin
-        include_string(@__MODULE__, provider_mux.code, provider_mux.file)
-    end
     @require WebSockets="104b5d7c-a370-577a-8038-80a2059c5097" begin
         include_string(@__MODULE__, provider_generic_http.code, provider_generic_http.file)
     end
