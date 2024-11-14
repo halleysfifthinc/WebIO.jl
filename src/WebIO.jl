@@ -1,7 +1,6 @@
 module WebIO
 
 using Observables
-using Requires
 using AssetRegistry
 using Base64: stringmime
 import Widgets
@@ -49,8 +48,6 @@ include("rpc.jl")
 
 # Extra "non-core" functionality
 include("devsetup.jl")
-include("../deps/jupyter.jl")
-
 
 """
     setup_provider(s::Union{Symbol, AbstractString})
@@ -87,12 +84,6 @@ function setup(provider::Symbol)
     re_register_renderables()
 end
 setup(provider::AbstractString) = setup(Symbol(provider))
-
-function prefetch_provider_file(basename)
-  filepath = joinpath(@__DIR__, "..", "ext", basename)
-  code = read(filepath, String)
-  (file = filepath, code = code)
-end
 
 struct _IJuliaInit
     function _IJuliaInit()
