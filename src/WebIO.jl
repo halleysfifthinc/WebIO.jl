@@ -95,16 +95,23 @@ function prefetch_provider_file(basename)
 end
 
 provider_mux = prefetch_provider_file("mux.jl")
-provider_ijulia = prefetch_provider_file("ijulia.jl")
 provider_generic_http = prefetch_provider_file("generic_http.jl")
+
+struct _IJuliaInit
+    function _IJuliaInit()
+        # based on assert_extension from longemen3000/ExtensionsExt
+        ext = Base.get_extension(@__MODULE__, :IJuliaExt)
+        if isnothing(ext)
+            throw(error("Extension `IJuliaExt` must be loaded to construct internal type `_IJuliaInit`."))
+        end
+        return new()
+    end
+end
 
 function __init__()
     push!(Observables.addhandler_callbacks, WebIO.setup_comm)
     @require Mux="a975b10e-0019-58db-a62f-e48ff68538c9" begin
         include_string(@__MODULE__, provider_mux.code, provider_mux.file)
-    end
-    @require IJulia="7073ff75-c697-5162-941a-fcdaad2a7d2a" begin
-        include_string(@__MODULE__, provider_ijulia.code, provider_ijulia.file)
     end
     @require WebSockets="104b5d7c-a370-577a-8038-80a2059c5097" begin
         include_string(@__MODULE__, provider_generic_http.code, provider_generic_http.file)

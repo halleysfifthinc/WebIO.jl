@@ -1,8 +1,15 @@
 using Sockets
 
-export AbstractConnection
+export AbstractConnection, Connection, connection
 
 abstract type AbstractConnection end
+
+struct Connection{C} <: AbstractConnection
+    conn::C
+end
+
+function connection end
+connection(c::Connection) = c.conn
 
 """
 The maximum number of messages to allow into the outbox.

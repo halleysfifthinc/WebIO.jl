@@ -1,16 +1,19 @@
-using .AssetRegistry
-using .Sockets
-using .WebIO
+module IJuliaExt
 
-struct IJuliaConnection <: AbstractConnection
-    comm::IJulia.CommManager.Comm
-end
+using WebIO
+using WebIO: WEBIO_NODE_MIME, _IJuliaInit
+using IJulia, Sockets
+
+# struct IJuliaConnection <: AbstractConnection
+#     comm::IJulia.CommManager.Comm
+# end
+IJuliaConnection = Connection{IJulia.CommManager.Comm}
 
 function Sockets.send(c::IJuliaConnection, data)
-    IJulia.send_comm(c.comm, data)
+    IJulia.send_comm(connection(c), data)
 end
 
-Base.isopen(c::IJuliaConnection) = haskey(IJulia.CommManager.comms, c.comm.id)
+Base.isopen(c::IJuliaConnection) = haskey(IJulia.CommManager.comms, connection(c).id)
 
 WebIO.register_renderable(T::Type, ::Val{:ijulia}) = nothing
 
@@ -37,7 +40,6 @@ installed for `WEBIO_NODE_MIME` that is preferred over `text/html`. If the HTML
 content is actually displayed, it means that the WebIO integration is not
 correctly installed.
 """
-struct _IJuliaInit end
 
 function Base.show(io::IO, m::WEBIO_NODE_MIME, ::_IJuliaInit)
     Base.show(io, m, node(:div))
@@ -68,16 +70,18 @@ function main()
         return
     end
 
-    # https://github.com/JuliaLang/IJulia.jl/pull/755
-    if isdefined(IJulia, :register_jsonmime)
-        IJulia.register_jsonmime(WEBIO_NODE_MIME())
-    else
-        @warn "IJulia doesn't have register_mime; WebIO may not work as expected. Please upgrade to IJulia v1.13.0 or greater."
-    end
+    IJulia.register_jsonmime(WEBIO_NODE_MIME())
 
     # See comment on _IJuliaInit for what this does
     display(_IJuliaInit())
+
+    return nothing
 end
 
 WebIO.setup_provider(::Val{:ijulia}) = main() # calling setup_provider(Val(:ijulia)) will display the setup javascript
-WebIO.setup(:ijulia)
+
+function __init__()
+    WebIO.setup(:ijulia)
+end
+
+end
