@@ -94,8 +94,6 @@ function prefetch_provider_file(basename)
   (file = filepath, code = code)
 end
 
-provider_generic_http = prefetch_provider_file("generic_http.jl")
-
 struct _IJuliaInit
     function _IJuliaInit()
         # based on assert_extension from longemen3000/ExtensionsExt
@@ -107,14 +105,30 @@ struct _IJuliaInit
     end
 end
 
+struct WebIOServer{S}
+    server::S
+    serve_task::Task
+
+    function WebIOServer(server::S, serve_task::Task) where S
+        # based on assert_extension from longemen3000/ExtensionsExt
+        ext = Base.get_extension(@__MODULE__, :WebSocketsExt)
+        if isnothing(ext)
+            throw(error("Extension `WebSocketsExt` must be loaded to construct the type `WebIOServer`."))
+        end
+        return new{S}(server, serve_task)
+    end
+end
+
 function webio_serve end
+function global_server_config end
+
+const bundle_key = Ref{String}()
+const singleton_instance = Ref{WebIOServer}()
+const routing_callback = Ref{Any}((req) -> missing)
+const webio_server_config = Ref{typeof((url = "", bundle_url = "", http_port = 0, ws_url = ""))}()
 
 function __init__()
     push!(Observables.addhandler_callbacks, WebIO.setup_comm)
-    @require WebSockets="104b5d7c-a370-577a-8038-80a2059c5097" begin
-        include_string(@__MODULE__, provider_generic_http.code, provider_generic_http.file)
-    end
-
 end
 
 end # module
