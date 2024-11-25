@@ -1,6 +1,7 @@
 import debug from "debug";
 import { Panel } from "@lumino/widgets";
-import { DisposableDelegate, IDisposable } from "@lumino/disposable";
+import { DisposableDelegate } from "@lumino/disposable";
+import type { IDisposable } from "@lumino/disposable";
 
 import type { JupyterFrontEndPlugin } from "@jupyterlab/application";
 import type { DocumentRegistry } from "@jupyterlab/docregistry";
