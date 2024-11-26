@@ -229,7 +229,7 @@ class WebIONotebookManager {
     if (!this.notebook.model) {
       throw new Error("Notebook model is not available!");
     }
-    return (this.notebook.model.metadata.get(WEBIO_METADATA_KEY) || {}) as any;
+    return (this.notebook.model.getMetadata(WEBIO_METADATA_KEY) || {}) as any;
   }
 
   private setWebIOMetadata(kernelId: string, commId: string) {
@@ -241,7 +241,7 @@ class WebIONotebookManager {
     if (!this.notebook.model) {
       throw new Error("Notebook model is not available!");
     }
-    this.notebook.model.metadata.set(WEBIO_METADATA_KEY, metadata as any);
+    this.notebook.model.setMetadata(WEBIO_METADATA_KEY, metadata as any);
   }
 }
 
