@@ -232,10 +232,17 @@ class WebIONotebookManager {
         ) {
           // Stop attempting to handle callbacks if previous kernel is gone
           this._webIO.setSendCallback((msg: any) => {});
+
+          // Close comm to force a re-connect to the new/restarted kernel
+          this.comm!.close();
         }
       },
       this,
     );
+    this.comm.onClose = (msg: any) => {
+      // Undefine comm so that the next connect call creates a new comm
+      this.comm = undefined;
+    };
 
     this.setWebIOMetadata(kernel.id, this.comm.commId);
   }
