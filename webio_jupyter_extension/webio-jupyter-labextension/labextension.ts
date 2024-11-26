@@ -8,6 +8,7 @@ import type { DocumentRegistry } from "@jupyterlab/docregistry";
 import type { INotebookModel, NotebookPanel } from "@jupyterlab/notebook";
 import type { IRenderMime } from "@jupyterlab/rendermime";
 import type { Kernel } from "@jupyterlab/services";
+import type { IKernelConnection } from "@jupyterlab/services/lib/kernel/kernel";
 
 import WebIO from "@webio/webio";
 
@@ -222,6 +223,19 @@ class WebIONotebookManager {
       log("Received WebIO comm message:", msg);
       this._webIO.dispatch(msg.content.data);
     };
+    kernel.statusChanged.connect(
+      (kernel: IKernelConnection, stat: Kernel.Status) => {
+        if (
+          stat === "restarting" ||
+          stat === "autorestarting" ||
+          stat === "dead"
+        ) {
+          // Stop attempting to handle callbacks if previous kernel is gone
+          this._webIO.setSendCallback((msg: any) => {});
+        }
+      },
+      this,
+    );
 
     this.setWebIOMetadata(kernel.id, this.comm.commId);
   }
