@@ -18,8 +18,8 @@
     "directory": "webio_jupyter_extension"
   },
   "scripts": {
-    "build": "yarn build:lib && yarn build:nbextension && yarn build:labextension:dev",
-    "build:prod": "yarn run clean && yarn run build:lib && yarn run build:labextension",
+    "build": "NODE_ENV=development npm-run-all build:lib:dev build:nbextension build:labextension:dev",
+    "build:prod": "NODE_ENV=production npm-run-all clean:all build:lib build:nbextension build:labextension",
     "build:nbextension": "webpack -c webpack.nbextension.js",
     "build:labextension": "jupyter labextension build .",
     "build:labextension:dev": "jupyter labextension build --development True .",
@@ -27,7 +27,8 @@
     "clean": "yarn run clean:lib",
     "clean:lib": "rimraf lib dist tsconfig.tsbuildinfo",
     "clean:labextension": "rimraf webio_jupyter_extension/labextension",
-    "clean:all": "yarn run clean:lib && yarn run clean:labextension",
+    "clean:nbextension": "rimraf webio_jupyter_extension/nbextension",
+    "clean:all": "npm-run-all clean:lib clean:labextension clean:nbextension",
     "eslint": "eslint . --ext .ts,.tsx --fix",
     "eslint:check": "eslint . --ext .ts,.tsx",
     "install:extension": "yarn run build",
