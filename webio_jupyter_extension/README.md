@@ -61,6 +61,10 @@ By default, the `yarn build` command generates the source maps for this extensio
 jupyter lab build --minimize=False
 ```
 
+### Debugging
+
+Debug logging in the browser dev tools can be enabled by setting `localStorage.debug` to `"WebIO:*"` or `"WebIO:<component>"` where `<component>` is the part of WebIO you wish to get debug logging from.
+
 ### Development uninstall
 
 ```bash
