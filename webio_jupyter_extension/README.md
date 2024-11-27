@@ -41,6 +41,11 @@ Note: You will need NodeJS to build the extension package.
 
 ```bash
 # Clone the repo to your local environment
+# In the packages directory
+# First build the @webio/webio package (needed by the webio-jupyterlab-provider part of the jupyter extension)
+npm install
+npm run build-prod
+
 # Change directory to the webio_jupyter_extension directory
 # Install package in development mode
 pip install -e .
