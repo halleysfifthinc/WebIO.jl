@@ -88,7 +88,7 @@ function observable_to_scope(obs::Observable)
     if isa(obs[], Scope) || isa(obs[], AbstractWidget)
         output = Observable(scope, "obs-scope", render(obs[]))
         map!(render, output, obs)
-        ensure_sync(scope, "obs-scope")
+        ensure_sync(scope, "obs-scope", output)
         scope.dom = node(ObservableNode(output.id, "obs-scope"))
         return scope
     end
@@ -106,7 +106,7 @@ function observable_to_scope(obs::Observable)
             end
             return value
         end
-        ensure_sync(scope, "obs-node")
+        ensure_sync(scope, "obs-node", output)
         scope.dom = node(ObservableNode(output.id, "obs-node"))
         return scope
     end

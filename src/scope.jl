@@ -371,13 +371,17 @@ function offjs(ctx::Scope, key, f)
     nothing
 end
 
-function ensure_sync(ctx::Scope, key)
-    ob = ctx.observs[key][1]
+function ensure_sync(ctx::Scope, key, ob)
     # have at most one synchronizing handler per observable
     if !any(((_, x),) ->isa(x, SyncCallback) && x.ctx==ctx, listeners(ob))
         f = SyncCallback(ctx, (msg) -> send_update_observable(ctx, key, msg))
         on(SyncCallback(ctx, f), ob)
     end
+end
+
+function ensure_sync(ctx::Scope, key)
+    ob = ctx.observs[key][1]
+    ensure_sync(ctx, key, ob)
 end
 
 function onjs(ob::AbstractObservable, f)
@@ -386,8 +390,8 @@ function onjs(ob::AbstractObservable, f)
         scope::Scope = ctx.value
         key ∉ scope.private_obs || error("Private observables don't allow JS observer functions")
         # make sure updates are set up to propagate to JS
-        ensure_sync(ctx, key)
-        onjs(ctx, key, f)
+        ensure_sync(scope, key, ob)
+        onjs(scope, key, f)
     else
         error("This observable is not associated with any scope.")
     end
