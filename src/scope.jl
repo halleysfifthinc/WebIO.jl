@@ -338,9 +338,11 @@ function set_nosync(@nospecialize(ob::AbstractObservable), val)
     # set Observable to new value without triggering listeners
     Observables.setexcludinghandlers!(ob, val)
     for (_, f) in listeners(ob)
-        if !(f isa SyncCallback)
-            Base.invokelatest(f, val)
-        end
+        # Run all listeners that aren't a `SyncCallback`
+        # (which would send an update to the browser)
+        f isa SyncCallback && continue
+        res = Base.invokelatest(f, val)
+        res isa Consume && res.x && break # stop calling callbacks if event is consumed
     end
     return
 end
