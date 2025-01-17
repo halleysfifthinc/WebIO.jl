@@ -1,5 +1,4 @@
-using WebIO
-using Test
+using WebIO: islocal
 
 @testset "Asset" begin
     @testset "Asset name and url constructor" begin
@@ -76,5 +75,14 @@ using Test
         @test nested.imports[1].imports[1] == Asset("stepone.js")
         @test nested.imports[1].imports[2] == Asset("steptwo.js")
         @test nested.imports[2] == Asset("bar.css")
+    end
+
+    @testset "islocal" begin
+        @test !islocal("https://github.com")
+        @test !islocal("http://github.com")
+        @test !islocal("ftp://github.com")
+        @test !islocal("//github.com")
+        @test islocal("/home/user/test")
+        @test islocal("C:/Users/user/test")
     end
 end
