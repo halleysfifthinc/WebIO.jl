@@ -160,7 +160,7 @@ getextension(path) = lowercase(last(split(first(split(path, "?")), ".")))
 Determine whether or not the specified path is a local filesystem path (and not
 a remote resource that is hosted on, for example, a CDN).
 """
-islocal(path) = !any(startswith.(path, ("//", "https://", "http://", "ftp://")))
+islocal(path) = !occursin(r"^((https?|ftp):)?//", path)
 
 """
     path2url(path)
