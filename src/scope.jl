@@ -196,19 +196,6 @@ function setobservable!(ctx, key, obs; sync=nothing)
     obs
 end
 
-# Ask JS to send stuff
-function setup_comm(f, ob::AbstractObservable)
-    if haskey(observ_id_dict, ob)
-        scope, key = observ_id_dict[ob]
-        # if !(key in scope.value.private_obs)
-        #     evaljs(scope.value, js"""
-        #            console.log(this)
-        #            this.observables[$key].sync = true
-        #     """)
-        # end
-    end
-end
-
 # TODO: hook `off` up
 
 function Base.getindex(w::Scope, key)

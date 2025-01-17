@@ -107,8 +107,4 @@ const singleton_instance = Ref{WebIOServer}()
 const routing_callback = Ref{Any}((req) -> missing)
 const webio_server_config = Ref{typeof((url = "", bundle_url = "", http_port = 0, ws_url = ""))}()
 
-function __init__()
-    push!(Observables.addhandler_callbacks, WebIO.setup_comm)
-end
-
 end # module
