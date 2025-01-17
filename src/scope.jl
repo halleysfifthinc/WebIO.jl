@@ -181,7 +181,7 @@ end
 # in order to allow interpolation of observables.
 const observ_id_dict = WeakKeyDict()
 
-function setobservable!(ctx, key, obs; sync=nothing)
+function setobservable!(ctx::Scope, key, obs::AbstractObservable; sync=nothing)
     key = string(key)
     if haskey(ctx.observs, key)
         @warn("An observable named $key already exists in scope $(scopeid(ctx)).
@@ -207,7 +207,7 @@ function Base.getindex(w::Scope, key)
     end
 end
 
-function Base.setindex!(w::Scope, obs, key)
+function Base.setindex!(w::Scope, obs::AbstractObservable, key)
     setobservable!(w, key, obs)
 end
 
@@ -314,8 +314,9 @@ Base.@deprecate ondependencies(ctx, jsf) onimport(ctx, jsf)
 A callable which updates the frontend
 """
 struct SyncCallback
-    ctx
+    ctx::Scope
     f
+    SyncCallback(ctx::Scope, @nospecialize(f)) = new(ctx,f)
 end
 
 (s::SyncCallback)(xs...) = s.f(xs...)
@@ -326,7 +327,8 @@ Set observable without synchronizing with the counterpart on the browser.
 This is mostly used to update observables in response to updates sent from th
 browser (so that we aren't sending the same update *back* to the browser).
 """
-function set_nosync(ob, val)
+function set_nosync(ob::AbstractObservable, val)
+    # set Observable to new value without triggering listeners
     Observables.setexcludinghandlers!(ob, val)
     for (_, f) in listeners(ob)
         if !(f isa SyncCallback)
@@ -338,7 +340,7 @@ end
 
 const lifecycle_commands = ["scope_created"]
 
-function dispatch(ctx, key, data)
+function dispatch(ctx::Scope, key, data)
     if haskey(ctx.observs, string(key))
         # this message has come from the browser
         # so don't update the browser back!
@@ -350,11 +352,11 @@ function dispatch(ctx, key, data)
     end
 end
 
-function onjs(ctx, key, f)
+function onjs(ctx::Scope, key, f)
     push!(get!(()->[], ctx.jshandlers, key), f)
 end
 
-function offjs(ctx, key, f)
+function offjs(ctx::Scope, key, f)
     if f in get(ctx.jshandlers, key, [])
         keys = ctx.jshandlers[key]
         deleteat!(keys, findall(in(f), keys))
@@ -362,7 +364,7 @@ function offjs(ctx, key, f)
     nothing
 end
 
-function ensure_sync(ctx, key)
+function ensure_sync(ctx::Scope, key)
     ob = ctx.observs[key][1]
     # have at most one synchronizing handler per observable
     if !any(((_, x),) ->isa(x, SyncCallback) && x.ctx==ctx, listeners(ob))
@@ -373,8 +375,8 @@ end
 
 function onjs(ob::AbstractObservable, f)
     if haskey(observ_id_dict, ob)
-        ctx, key = observ_id_dict[ob]
-        ctx = ctx.value
+        ctx, key::String = observ_id_dict[ob]
+        scope::Scope = ctx.value
         # make sure updates are set up to propagate to JS
         ensure_sync(ctx, key)
         onjs(ctx, key, f)
