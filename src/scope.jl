@@ -163,9 +163,16 @@ end
 
 private(scope::Scope, props...) = foreach(p->push!(scope.private_obs, string(p)), props)
 
+"""
+    @private scope["observable"] = Observable(1)
+
+Mark a scope's observable as Julia-side only. A `@private` observable won't have a matching
+observable in Javascript, which means a javascript function cannot be used to update this
+observable.
+"""
 macro private(ex)
     if ex.head == :(=)
-        ref, val = ex.args
+        ref, _ = ex.args
         scope, key = ref.args
         quote
             x=$(esc(ex))
@@ -377,6 +384,7 @@ function onjs(ob::AbstractObservable, f)
     if haskey(observ_id_dict, ob)
         ctx, key::String = observ_id_dict[ob]
         scope::Scope = ctx.value
+        key ∉ scope.private_obs || error("Private observables don't allow JS observer functions")
         # make sure updates are set up to propagate to JS
         ensure_sync(ctx, key)
         onjs(ctx, key, f)
