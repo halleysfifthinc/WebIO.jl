@@ -155,7 +155,7 @@ end
 (w::Scope)(arg) = (w.dom = arg; w)
 Base.wait(scope::Scope) = ensure_connection(scope.pool)
 
-function Observables.on(f, w::Scope, key)
+function Observables.on(@nospecialize(f), w::Scope, key)
     key = string(key)
     listener, _ = get!(()->(Observable{Any}(w, key, nothing), nothing), w.observs, key)
     on(f, listener)
@@ -188,7 +188,7 @@ end
 # in order to allow interpolation of observables.
 const observ_id_dict = WeakKeyDict()
 
-function setobservable!(ctx::Scope, key, obs::AbstractObservable; sync=nothing)
+function setobservable!(ctx::Scope, key, @nospecialize(obs::AbstractObservable); sync=nothing)
     key = string(key)
     if haskey(ctx.observs, key)
         @warn("An observable named $key already exists in scope $(scopeid(ctx)).
@@ -214,7 +214,7 @@ function Base.getindex(w::Scope, key)
     end
 end
 
-function Base.setindex!(w::Scope, obs::AbstractObservable, key)
+function Base.setindex!(w::Scope, @nospecialize(obs::AbstractObservable), key)
     setobservable!(w, key, obs)
 end
 
@@ -334,7 +334,7 @@ Set observable without synchronizing with the counterpart on the browser.
 This is mostly used to update observables in response to updates sent from th
 browser (so that we aren't sending the same update *back* to the browser).
 """
-function set_nosync(ob::AbstractObservable, val)
+function set_nosync(@nospecialize(ob::AbstractObservable), val)
     # set Observable to new value without triggering listeners
     Observables.setexcludinghandlers!(ob, val)
     for (_, f) in listeners(ob)
@@ -371,7 +371,7 @@ function offjs(ctx::Scope, key, f)
     nothing
 end
 
-function ensure_sync(ctx::Scope, key, ob)
+function ensure_sync(ctx::Scope, key, @nospecialize(ob))
     # have at most one synchronizing handler per observable
     if !any(((_, x),) ->isa(x, SyncCallback) && x.ctx==ctx, listeners(ob))
         f = SyncCallback(ctx, (msg) -> send_update_observable(ctx, key, msg))
@@ -384,7 +384,7 @@ function ensure_sync(ctx::Scope, key)
     ensure_sync(ctx, key, ob)
 end
 
-function onjs(ob::AbstractObservable, f)
+function onjs(@nospecialize(ob::AbstractObservable), f)
     if haskey(observ_id_dict, ob)
         ctx, key::String = observ_id_dict[ob]
         scope::Scope = ctx.value
