@@ -43,7 +43,11 @@ struct Node{T}
 end
 
 function Node(instanceof, children...; props...)
-    return Node(instanceof, collect(Any, children), Dict(props...))
+    if isempty(children)
+        return Node(instanceof, pvec(), Dict(props...))
+    else
+        return Node(instanceof, collect(Any, children), Dict(props...))
+    end
 end
 
 # Can/should this be deprecated?

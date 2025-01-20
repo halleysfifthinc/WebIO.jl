@@ -107,8 +107,33 @@ const singleton_instance = Ref{WebIOServer}()
 const routing_callback = Ref{Any}((req) -> missing)
 const webio_server_config = Ref{typeof((url = "", bundle_url = "", http_port = 0, ws_url = ""))}()
 
-function __init__()
-    push!(Observables.addhandler_callbacks, WebIO.setup_comm)
+using PrecompileTools
+@compile_workload begin
+    asset = Async(["WebIO" => bundlepath, joinpath(@__DIR__, "..", "test", "assets", "trivial_import.js")])
+    tojs(asset)
+    tojs(Sync([asset]))
+    js"$(asset)"
+    js"$(Sync([asset]))"
+    tojs(js"$(asset)")
+    tojs(js"$(Sync([asset]))")
+
+    div = Node(:div; id="test-div")
+    connp = ConnectionPool()
+    jsf = js"""
+    function (val)
+        _webIOScope.setObservableValue("out",val);
+    end"""
+
+    ### PrecompileTools fails with a segfault error when a Scope() is created
+    # s = Scope()
 end
+precompile(Tuple{Type{WebIO.Scope}})
+precompile(Tuple{typeof(Base.setindex!), WebIO.Scope, Observables.Observable{String}, String})
+precompile(Tuple{typeof(Base.setindex!), WebIO.Scope, Observables.Observable{Any}, String})
+precompile(Tuple{typeof(Base.setindex!), WebIO.Scope, Observables.Observable{Dict{Any,Any}}, String})
+precompile(Tuple{typeof(WebIO.onjs), AbstractObservable, WebIO.JSString})
+precompile(Tuple{typeof(WebIO.onjs), Scope, String, WebIO.JSString})
+precompile(Tuple{typeof(WebIO.ensure_sync), WebIO.Scope, String})
+precompile(Tuple{typeof(WebIO.register_renderable_macro_helper), Expr})
 
 end # module

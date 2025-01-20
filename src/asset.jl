@@ -114,17 +114,23 @@ end
 
 # The output of lowerassets is initially sent with the Scope
 # this should trigger loading of the assets before onmount callbacks
-lowerassets(x) = JSON.lower(Asset(x))
-lowerassets(x::Asset) = JSON.lower(x)
-lowerassets(x::Async) = Dict(
-    "type" => "async_block",
-    "data" => map(lowerassets, x.imports),
-)
+lowerassets(x) = JSONText(JSON.json(Asset(x)))
+lowerassets(x::Asset) = JSONText(JSON.json(x))
 lowerassets(x::AbstractArray) = lowerassets(Async(x))
-lowerassets(x::Sync) = Dict(
-    "type"=>"sync_block",
-    "data" => map(lowerassets, x.imports),
-)
+function lowerassets(x::Union{Async,Sync})
+    imports = JSONText(sprint(x.imports) do io, imports
+        print(io, '[')
+        for (i,imp) in enumerate(imports)
+            JSON.print(io, lowerassets(imp))
+            i !== lastindex(imports) && print(io, ',')
+        end
+        print(io, ']')
+    end)
+    return JSONText(JSON.json((;
+        type = x isa Async ? "async_block" : "sync_block",
+        data = imports,
+    )))
+end
 
 """
     ensure_asset(asset)
@@ -160,7 +166,7 @@ getextension(path) = lowercase(last(split(first(split(path, "?")), ".")))
 Determine whether or not the specified path is a local filesystem path (and not
 a remote resource that is hosted on, for example, a CDN).
 """
-islocal(path) = !any(startswith.(path, ("//", "https://", "http://", "ftp://")))
+islocal(path) = !occursin(r"^((https?|ftp):)?//", path)
 
 """
     path2url(path)

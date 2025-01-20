@@ -54,6 +54,7 @@ mutable struct Scope
             mount_callbacks
         )
         register_scope!(scope)
+        finalizer(deregister_scope!, scope)
         return scope
     end
 end
@@ -155,7 +156,7 @@ end
 (w::Scope)(arg) = (w.dom = arg; w)
 Base.wait(scope::Scope) = ensure_connection(scope.pool)
 
-function Observables.on(f, w::Scope, key)
+function Observables.on(@nospecialize(f), w::Scope, key)
     key = string(key)
     listener, _ = get!(()->(Observable{Any}(w, key, nothing), nothing), w.observs, key)
     on(f, listener)
@@ -163,9 +164,16 @@ end
 
 private(scope::Scope, props...) = foreach(p->push!(scope.private_obs, string(p)), props)
 
+"""
+    @private scope["observable"] = Observable(1)
+
+Mark a scope's observable as Julia-side only. A `@private` observable won't have a matching
+observable in Javascript, which means a javascript function cannot be used to update this
+observable.
+"""
 macro private(ex)
     if ex.head == :(=)
-        ref, val = ex.args
+        ref, _ = ex.args
         scope, key = ref.args
         quote
             x=$(esc(ex))
@@ -181,7 +189,7 @@ end
 # in order to allow interpolation of observables.
 const observ_id_dict = WeakKeyDict()
 
-function setobservable!(ctx, key, obs; sync=nothing)
+function setobservable!(ctx::Scope, key, @nospecialize(obs::AbstractObservable); sync=nothing)
     key = string(key)
     if haskey(ctx.observs, key)
         @warn("An observable named $key already exists in scope $(scopeid(ctx)).
@@ -196,19 +204,6 @@ function setobservable!(ctx, key, obs; sync=nothing)
     obs
 end
 
-# Ask JS to send stuff
-function setup_comm(f, ob::AbstractObservable)
-    if haskey(observ_id_dict, ob)
-        scope, key = observ_id_dict[ob]
-        # if !(key in scope.value.private_obs)
-        #     evaljs(scope.value, js"""
-        #            console.log(this)
-        #            this.observables[$key].sync = true
-        #     """)
-        # end
-    end
-end
-
 # TODO: hook `off` up
 
 function Base.getindex(w::Scope, key)
@@ -220,7 +215,7 @@ function Base.getindex(w::Scope, key)
     end
 end
 
-function Base.setindex!(w::Scope, obs, key)
+function Base.setindex!(w::Scope, @nospecialize(obs::AbstractObservable), key)
     setobservable!(w, key, obs)
 end
 
@@ -327,8 +322,9 @@ Base.@deprecate ondependencies(ctx, jsf) onimport(ctx, jsf)
 A callable which updates the frontend
 """
 struct SyncCallback
-    ctx
+    ctx::Scope
     f
+    SyncCallback(ctx::Scope, @nospecialize(f)) = new(ctx,f)
 end
 
 (s::SyncCallback)(xs...) = s.f(xs...)
@@ -339,19 +335,22 @@ Set observable without synchronizing with the counterpart on the browser.
 This is mostly used to update observables in response to updates sent from th
 browser (so that we aren't sending the same update *back* to the browser).
 """
-function set_nosync(ob, val)
+function set_nosync(@nospecialize(ob::AbstractObservable), val)
+    # set Observable to new value without triggering listeners
     Observables.setexcludinghandlers!(ob, val)
     for (_, f) in listeners(ob)
-        if !(f isa SyncCallback)
-            Base.invokelatest(f, val)
-        end
+        # Run all listeners that aren't a `SyncCallback`
+        # (which would send an update to the browser)
+        f isa SyncCallback && continue
+        res = Base.invokelatest(f, val)
+        res isa Consume && res.x && break # stop calling callbacks if event is consumed
     end
     return
 end
 
 const lifecycle_commands = ["scope_created"]
 
-function dispatch(ctx, key, data)
+function dispatch(ctx::Scope, key, data)
     if haskey(ctx.observs, string(key))
         # this message has come from the browser
         # so don't update the browser back!
@@ -363,11 +362,11 @@ function dispatch(ctx, key, data)
     end
 end
 
-function onjs(ctx, key, f)
+function onjs(ctx::Scope, key, f)
     push!(get!(()->[], ctx.jshandlers, key), f)
 end
 
-function offjs(ctx, key, f)
+function offjs(ctx::Scope, key, f)
     if f in get(ctx.jshandlers, key, [])
         keys = ctx.jshandlers[key]
         deleteat!(keys, findall(in(f), keys))
@@ -375,8 +374,7 @@ function offjs(ctx, key, f)
     nothing
 end
 
-function ensure_sync(ctx, key)
-    ob = ctx.observs[key][1]
+function ensure_sync(ctx::Scope, key, @nospecialize(ob))
     # have at most one synchronizing handler per observable
     if !any(((_, x),) ->isa(x, SyncCallback) && x.ctx==ctx, listeners(ob))
         f = SyncCallback(ctx, (msg) -> send_update_observable(ctx, key, msg))
@@ -384,13 +382,19 @@ function ensure_sync(ctx, key)
     end
 end
 
-function onjs(ob::AbstractObservable, f)
+function ensure_sync(ctx::Scope, key)
+    ob = ctx.observs[key][1]
+    ensure_sync(ctx, key, ob)
+end
+
+function onjs(@nospecialize(ob::AbstractObservable), f)
     if haskey(observ_id_dict, ob)
-        ctx, key = observ_id_dict[ob]
-        ctx = ctx.value
+        ctx, key::String = observ_id_dict[ob]
+        scope::Scope = ctx.value
+        key ∉ scope.private_obs || error("Private observables don't allow JS observer functions")
         # make sure updates are set up to propagate to JS
-        ensure_sync(ctx, key)
-        onjs(ctx, key, f)
+        ensure_sync(scope, key, ob)
+        onjs(scope, key, f)
     else
         error("This observable is not associated with any scope.")
     end

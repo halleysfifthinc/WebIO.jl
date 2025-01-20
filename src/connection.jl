@@ -35,6 +35,7 @@ function ConnectionPool(
 
     # Catch errors here, otherwise they are lost to the void.
     @async try
+        wait(pool.outbox)
         process_messages(pool)
     catch exc
         @error(
@@ -97,7 +98,7 @@ This function should be run as a task (it will block forever otherwise).
 """
 function process_messages(pool::ConnectionPool)
     ensure_connection(pool)
-    while true
+    while isready(pool.outbox) || isopen(pool.outbox)
         msg = take!(pool.outbox)
         @sync begin
             # This may result in sending to no connections, but we're okay with
