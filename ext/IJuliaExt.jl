@@ -1,7 +1,8 @@
 module IJuliaExt
 
 using WebIO
-using WebIO: WEBIO_NODE_MIME
+using WebIO: WEBIO_NODE_MIME, PrecompileTools
+using .PrecompileTools
 using IJulia, Sockets
 
 struct IJuliaConnection <: AbstractConnection
@@ -81,6 +82,10 @@ end
 WebIO.setup_provider(::Val{:ijulia}) = main() # calling setup_provider(Val(:ijulia)) will display the setup javascript
 
 function __init__()
+    WebIO.setup(:ijulia)
+end
+
+@compile_workload begin
     WebIO.setup(:ijulia)
 end
 
