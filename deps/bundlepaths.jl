@@ -1,5 +1,4 @@
-using Pkg.TOML
-using Pkg.Artifacts
+using TOML, Artifacts
 
 # Fix the NPM version for now
 # Now that we're not distributing Jupyter stuff via NPM, I'd rather just check
