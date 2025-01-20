@@ -54,6 +54,7 @@ mutable struct Scope
             mount_callbacks
         )
         register_scope!(scope)
+        finalizer(deregister_scope!, scope)
         return scope
     end
 end
